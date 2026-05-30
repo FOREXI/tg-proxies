@@ -49,23 +49,23 @@
         </header>
 
         <div class="container mx-auto px-4 max-w-xl mb-8">
-            <div class="glass-card rounded-2xl p-4 border border-slate-800/50 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-right">
+            <div id="network-box" class="glass-card rounded-2xl p-4 border border-slate-800/50 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-right">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-sm shadow-inner">
                         <i class="fa-solid fa-globe"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Your Public Network</p>
-                        <h4 id="user-ip" class="font-mono text-sm font-bold text-slate-300">Loading IP...</h4>
+                        <p class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">آی‌پی عمومی شما</p>
+                        <h4 id="user-ip" class="font-mono text-sm font-bold text-slate-400">--- . --- . --- . ---</h4>
                     </div>
                 </div>
                 <div class="sm:text-left">
-                    <p class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">ISP Provider</p>
-                    <h4 id="user-isp" class="text-xs font-bold text-indigo-400 truncate max-w-[180px]">Checking Provider...</h4>
+                    <p class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">شرکت ارائه‌دهنده (ISP)</p>
+                    <h4 id="user-isp" class="text-xs font-bold text-slate-400 truncate max-w-[180px]">نامشخص</h4>
                 </div>
-                <div class="flex items-center gap-1 bg-emerald-500/5 border border-emerald-500/10 px-2.5 py-1 rounded-lg text-green-400 text-[10px] font-bold">
-                    <i class="fa-solid fa-chart-line animate-pulse"></i> پایدار
-                </div>
+                <button onclick="checkUserNetwork()" id="btn-check-net" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-2 rounded-xl transition-all active:scale-95 pointer-events-auto">
+                    <i class="fa-solid fa-circle-question"></i> بررسی وضعیت شبکه من
+                </button>
             </div>
         </div>
 
@@ -86,7 +86,7 @@
         <main class="container mx-auto px-4 max-w-6xl">
             <div id="loading-state" class="text-center py-20">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-800 border-t-blue-500 mb-4"></div>
-                <p class="text-xs text-slate-500 font-mono">Fetching database from secure sources...</p>
+                <p class="text-xs text-slate-500 font-mono">در حال دریافت و بهینه‌سازی ساختار انواع سرورها...</p>
             </div>
 
             <div id="proxies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 transition-all duration-300"></div>
@@ -103,7 +103,7 @@
                 <canvas id="qr-canvas"></canvas>
             </div>
             <p class="text-[11px] text-slate-400 leading-relaxed">
-                دوربین گوشی را مقابل بارکد بگیرید تا پروکسی فوراً روی تلگرام شما فعال شود.
+                دوربین گوشی را مقابل بارکد بگیرید تا پروکسی اصلاح‌شده فوراً روی تلگرام فعال شود.
             </p>
         </div>
     </div>
@@ -132,38 +132,42 @@
         let allProxies = [];
         let currentTab = 'all';
 
-        // واکشی اطلاعات اینترنت کاربر (IP و ISP)
-        async function fetchNetworkInfo() {
+        async function checkUserNetwork() {
+            const btn = document.getElementById('btn-check-net');
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> در حال بررسی...`;
             try {
-                const res = await fetch('https://ipapi.co/json/');
+                const res = await fetch('https://demo.ip-api.com/json/?lang=en');
                 if (!res.ok) throw new Error();
                 const data = await res.json();
-                document.getElementById('user-ip').innerText = data.ip || 'Unknown';
-                document.getElementById('user-isp').innerText = data.org || 'Unknown Provider';
+                document.getElementById('user-ip').innerText = data.query || 'Unknown';
+                document.getElementById('user-isp').innerText = data.isp || 'Unknown Operator';
+                btn.className = "flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl text-green-400 text-[10px] font-bold";
+                btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> بررسی شد`;
             } catch (e) {
-                document.getElementById('user-ip').innerText = '127.0.0.1 (Error)';
-                document.getElementById('user-isp').innerText = 'Local Operator';
+                document.getElementById('user-ip').innerText = 'خطا در ارتباط';
+                document.getElementById('user-isp').innerText = 'محدودیت شبکه ایران';
+                btn.className = "flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl text-red-400 text-[10px] font-bold";
+                btn.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> عدم موفقیت`;
             }
         }
 
         async function fetchProxies() {
             let textData = '';
-            
             try {
-                document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-satellite-dish animate-pulse text-blue-400"></i> در حال تلاش برای اتصال به مخزن اول (CDN)...`;
+                document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-satellite-dish animate-pulse text-blue-400"></i> اتصال به مخزن اول (CDN)...`;
                 const response = await fetch(primaryUrl);
                 if (!response.ok) throw new Error('CDN Failed');
                 textData = await response.text();
             } catch (error) {
                 try {
-                    document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> مخزن اول ناموفق بود. سوئیچ به مخزن پشتیبان (GitHub)...`;
+                    document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> سوئیچ به مخزن پشتیبان (GitHub)...`;
                     const response = await fetch(fallbackUrl);
                     if (!response.ok) throw new Error('Fallback Failed');
                     textData = await response.text();
                 } catch (fallbackError) {
                     document.getElementById('loading-state').innerHTML = `
                         <i class="fa-solid fa-circle-exclamation text-red-500 text-2xl mb-2"></i>
-                        <p class="text-xs text-red-400 font-mono">هر دو مخزن اصلی و پشتیبان روی شبکه شما مسدود هستند.</p>
+                        <p class="text-xs text-red-400 font-mono">مخازن پروکسی مسدود هستند.</p>
                     `;
                     return;
                 }
@@ -171,13 +175,19 @@
             
             const lines = textData.split('\n')
                 .map(line => line.trim())
-                .filter(line => line.startsWith('tg://proxy') || line.startsWith('https://t.me/proxy'));
+                .filter(line => line.includes('server=') && line.includes('port=') && line.includes('secret='));
             
             const uniqueLines = [...new Set(lines)];
             
-            allProxies = uniqueLines.map((link, idx) => {
-                const parsed = parseProxyLink(link);
-                return parsed ? { ...parsed, id: idx, status: 'testing', ping: null } : null;
+            let indexCounter = 0;
+            allProxies = uniqueLines.map((link) => {
+                const parsed = parseAndCleanProxyLink(link);
+                if (parsed) {
+                    const obj = { ...parsed, id: indexCounter, status: 'testing', ping: null };
+                    indexCounter++;
+                    return obj;
+                }
+                return null;
             }).filter(p => p !== null);
 
             document.getElementById('count-all').innerText = allProxies.length;
@@ -187,21 +197,42 @@
             startBulkPing();
         }
 
-        function parseProxyLink(link) {
+        // 🔥 سیستم استخراج و پاک‌سازی فوق پیشرفته بدون وابستگی به فرمت پسوند یا ساختار دامنه
+        function parseAndCleanProxyLink(link) {
             try {
-                const urlObj = new URL(link.replace('tg://', 'https://'));
+                // استخراج پارامترها با استفاده از ریجکس (Regex) بدون توجه به نوع و پسوند دامنه‌ها
+                const serverMatch = link.match(/[?&]server=([^&]+)/);
+                const portMatch = link.match(/[?&]port=([^&]+)/);
+                const secretMatch = link.match(/[?&]secret=([^&]+)/);
+
+                if (!serverMatch || !portMatch || !secretMatch) return null;
+
+                let server = decodeURIComponent(serverMatch[1]).trim();
+                const port = decodeURIComponent(portMatch[1]).trim();
+                const secret = decodeURIComponent(secretMatch[1]).trim();
+
+                // 🛠 پاک‌سازی همه‌جانبه: حذف هر نوع پروتکل فیک نظیر https://، http:// و آدرس‌های دنباله‌دار مخدوش‌کننده تلگرام
+                server = server.replace(/^(https?:\/\/)/i, ''); 
+                server = server.split('/')[0]; 
+                server = server.trim();
+
+                if (server === '') return null;
+
+                // بازسازی لینک ۱۰۰٪ استاندارد و بدون باگ برای ارسال مستقیم به تلگرام
+                const cleanOriginal = `tg://proxy?server=${server}&port=${port}&secret=${secret}`;
+
                 return {
-                    server: urlObj.searchParams.get('server'),
-                    port: urlObj.searchParams.get('port'),
-                    secret: urlObj.searchParams.get('secret'),
-                    original: link
+                    server: server,
+                    port: port,
+                    secret: secret,
+                    original: cleanOriginal
                 };
             } catch (e) { return null; }
         }
 
         async function measurePing(server) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const timeoutId = setTimeout(() => controller.abort(), 1800);
             const startTime = performance.now();
             
             try {
@@ -226,7 +257,6 @@
 
             let displayList = [...allProxies];
 
-            // مرتب‌سازی خودکار: زنده و سریع‌ترین‌ها بالاتر می‌آیند
             displayList.sort((a, b) => {
                 if (a.status === 'alive' && b.status === 'alive') return a.ping - b.ping;
                 if (a.status === 'alive') return -1;
@@ -257,20 +287,23 @@
                 card.className = `glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${proxy.status === 'dead' ? 'opacity-30 scale-[0.98]' : ''}`;
                 
                 let badgeClass = 'bg-slate-900 text-slate-500 border border-slate-800';
-                let badgeContent = '<i class="fa-solid fa-circle-notch fa-spin text-[9px] mr-1"></i> Checking';
+                let badgeContent = '<i class="fa-solid fa-circle-notch fa-spin text-[9px] mr-1"></i> سنجش';
                 let speedTag = '';
 
                 if (proxy.status === 'alive') {
                     badgeClass = 'bg-green-500/10 text-green-400 border border-green-500/20 font-mono';
                     badgeContent = `${proxy.ping} ms`;
                     
-                    if (proxy.ping < 120) speedTag = '<span class="bg-cyan-500/10 text-cyan-400 text-[9px] px-2 py-0.5 rounded-md font-bold">عالی ⚡</span>';
-                    else if (proxy.ping < 250) speedTag = '<span class="bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-0.5 rounded-md font-bold">خوب 🟢</span>';
+                    if (proxy.ping < 150) speedTag = '<span class="bg-cyan-500/10 text-cyan-400 text-[9px] px-2 py-0.5 rounded-md font-bold">عالی ⚡</span>';
+                    else if (proxy.ping < 300) speedTag = '<span class="bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-0.5 rounded-md font-bold">خوب 🟢</span>';
                     else speedTag = '<span class="bg-amber-500/10 text-amber-400 text-[9px] px-2 py-0.5 rounded-md font-bold">معمولی 🟡</span>';
                 } else if (proxy.status === 'dead') {
                     badgeClass = 'bg-red-500/10 text-red-400 border border-red-500/20';
                     badgeContent = 'قطع ارتباط';
                 }
+
+                const isIp = /^[0-9.]+$/.test(proxy.server);
+                const serverIcon = isIp ? 'fa-network-wired text-blue-400' : 'fa-globe text-indigo-400';
 
                 card.innerHTML = `
                     <div class="absolute top-0 left-0 bg-slate-950/80 border-b border-r border-slate-900 text-slate-600 text-[9px] px-2 py-0.5 rounded-br-xl font-mono">
@@ -285,12 +318,12 @@
 
                     <div class="mb-5 mt-6">
                         <div class="flex items-center gap-3 mb-3">
-                            <div class="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-xs text-slate-400 border border-slate-900">
-                                <i class="fa-solid fa-network-wired"></i>
+                            <div class="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-xs border border-slate-900 shadow-lg">
+                                <i class="fa-solid ${serverIcon}"></i>
                             </div>
                             <div class="overflow-hidden flex-1">
-                                <h3 class="font-bold text-slate-300 text-xs font-mono truncate" title="${proxy.server}">${proxy.server}</h3>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Port: <span class="font-mono text-slate-400">${proxy.port}</span></p>
+                                <h3 class="font-bold text-slate-300 text-xs font-mono truncate tracking-wide" title="${proxy.server}">${proxy.server}</h3>
+                                <p class="text-[10px] text-slate-500 mt-0.5">پورت: <span class="font-mono text-slate-400">${proxy.port}</span></p>
                             </div>
                         </div>
                         <div class="bg-slate-950/40 border border-slate-900 rounded-xl p-2.5 text-[10px] font-mono text-slate-500 flex justify-between items-center select-all">
@@ -319,7 +352,7 @@
 
         async function startBulkPing() {
             const statusEl = document.getElementById('update-status');
-            if(statusEl) statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-blue-400"></i> در حال بروزرسانی و پینگ‌سنجی پروکسی‌ها...`;
+            if(statusEl) statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-blue-400"></i> در حال ارزیابی پینگ زنده پروکسی‌های بهینه‌سازی‌شده...`;
             
             allProxies.forEach(p => { if(p.status !== 'alive') p.status = 'testing' });
             renderProxies();
@@ -337,7 +370,7 @@
             });
 
             await Promise.all(pingPromises);
-            if(statusEl) statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i> پینگ‌سنجی با موفقیت روی اپراتور شما انجام شد.`;
+            if(statusEl) statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i> فرآیند اصلاح ساختار و پینگ‌سنجی به پایان رسید.`;
             
             const hasAlive = allProxies.some(p => p.status === 'alive');
             if (hasAlive) {
@@ -365,7 +398,7 @@
 
         function copySingle(text) {
             navigator.clipboard.writeText(text).then(() => {
-                showToast('پروکسی با موفقیت کپی شد 📋');
+                showToast('پروکسی اصلاح‌شده با موفقیت کپی شد 📋');
             });
         }
 
@@ -392,7 +425,6 @@
             }, 3000);
         }
 
-        // توابع مدیریت مودال بارکد (QR Code)
         function openQRModal(link) {
             const modal = document.getElementById('qr-modal');
             modal.classList.remove('hidden');
@@ -401,7 +433,6 @@
                 modal.querySelector('div').classList.remove('scale-95');
             }, 10);
 
-            // رندر بارکد در بوم (Canvas)
             new QRious({
                 element: document.getElementById('qr-canvas'),
                 value: link,
@@ -418,8 +449,6 @@
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        // شروع واکشی سرویس‌ها به محض لود صفحه
-        fetchNetworkInfo();
         fetchProxies();
     </script>
 </body>
