@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد پیشرفته پروکسی MTProto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #111827 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px rgba(255, 255, 255, 0.05) solid;
+        }
+        .glass-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+        .active-tab {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col justify-between pb-24 selection:bg-blue-500/30">
+
+    <div>
+        <header class="container mx-auto px-4 pt-12 pb-8 text-center">
+            <div class="inline-flex p-4 bg-blue-500/10 rounded-2xl text-blue-400 mb-4 shadow-inner">
+                <i class="fa-solid fa-circle-nodes text-4xl animate-pulse"></i>
+            </div>
+            <h1 class="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 mb-3">
+                سامانه پینگ‌سنج و مدیریت پروکسی MTProto
+            </h1>
+            <p class="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+                تحلیل زنده کیفیت اتصال بر اساس نوع اپراتور و اینترنت شما با قابلیت خروجی تجمیعی.
+            </p>
+            
+            <div id="update-status" class="mt-5 text-xs bg-slate-900/80 border border-slate-800 inline-flex items-center gap-2 px-4 py-2 rounded-full text-slate-400 font-medium shadow-sm">
+                <i class="fa-solid fa-spinner fa-spin text-blue-400"></i> در حال اتصال به مخزن اصلی...
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 max-w-md mb-8">
+            <div class="bg-slate-900/60 p-1.5 rounded-xl border border-slate-800/80 flex gap-1 text-sm font-medium">
+                <button onclick="switchTab('all')" id="tab-all" class="flex-1 py-2.5 rounded-lg text-center transition-all duration-200 active-tab">
+                    همه (<span id="count-all">0</span>)
+                </button>
+                <button onclick="switchTab('alive')" id="tab-alive" class="flex-1 py-2.5 rounded-lg text-center text-slate-400 hover:text-slate-200 transition-all duration-200 border border-transparent">
+                    زنده (<span id="count-alive" class="text-green-400">0</span>)
+                </button>
+                <button onclick="switchTab('dead')" id="tab-dead" class="flex-1 py-2.5 rounded-lg text-center text-slate-400 hover:text-slate-200 transition-all duration-200 border border-transparent">
+                    قطع (<span id="count-dead" class="text-red-400">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <main class="container mx-auto px-4 max-w-6xl">
+            <div id="loading-state" class="text-center py-16">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-2 border-slate-700 border-t-blue-500 mb-4"></div>
+                <p class="text-sm text-slate-400 font-medium">در حال واکشی اطلاعات پایگاه داده...</p>
+            </div>
+
+            <div id="proxies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 opacity-0 transition-opacity duration-300">
+                </div>
+        </main>
+    </div>
+
+    <div class="fixed bottom-6 left-6 z-50 animate-bounce hover:animate-none">
+        <button onclick="copyAllAlive()" id="btn-bulk-copy" class="hidden flex items-center gap-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-xl shadow-green-900/20 transition-all duration-200 transform active:scale-95">
+            <i class="fa-solid fa-copy text-lg"></i>
+            <span>کپی همه پروکسی‌های زنده</span>
+        </button>
+    </div>
+
+    <footer class="w-full text-center py-8 border-t border-slate-900 mt-12">
+        <p class="text-xs tracking-widest text-slate-600 uppercase font-mono">
+            Created by SdStar
+        </p>
+    </footer>
+
+    <script>
+        const proxySourceUrl = 'https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt';
+        let allProxies = [];
+        let currentTab = 'all';
+
+        async function fetchProxies() {
+            try {
+                const response = await fetch(proxySourceUrl);
+                if (!response.ok) throw new Error();
+                const text = await response.text();
+                
+                const lines = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.startsWith('tg://proxy') || line.startsWith('https://t.me/proxy'));
+                
+                // پارس کردن اولیه دیتا
+                allProxies = lines.map((link, idx) => {
+                    const parsed = parseProxyLink(link);
+                    return parsed ? { ...parsed, id: idx, status: 'testing', ping: null } : null;
+                }).filter(p => p !== null);
+
+                document.getElementById('count-all').innerText = allProxies.length;
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('proxies-container').classList.remove('opacity-0');
+                
+                renderProxies();
+                startBulkPing();
+                
+            } catch (error) {
+                document.getElementById('loading-state').innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-3"></i>
+                    <p class="text-sm text-red-400">خطا در برقراری ارتباط با سرور گیت‌هاب.</p>
+                `;
+            }
+        }
+
+        function parseProxyLink(link) {
+            try {
+                const urlObj = new URL(link.replace('tg://', 'https://'));
+                return {
+                    server: urlObj.searchParams.get('server'),
+                    port: urlObj.searchParams.get('port'),
+                    secret: urlObj.searchParams.get('secret'),
+                    original: link
+                };
+            } catch (e) { return null; }
+        }
+
+        // اندازه گیری دقیق تر پینگ سمت کاربر
+        async function measurePing(server) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500); // تایم اوت ۲.۵ ثانیه برای سرعت بیشتر
+            const startTime = performance.now();
+            
+            try {
+                // ارسال ریکوئست سبک به پورت وب جهت سنجش پاسخگویی هاست
+                await fetch(`https://${server}/favicon.ico?nocache=${Math.random()}`, {
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                return Math.round(performance.now() - startTime);
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name !== 'AbortError') {
+                    // ارورهای کورس یا غیره نشانه زنده بودن سرور فیزیکی است
+                    return Math.round(performance.now() - startTime);
+                }
+                return null; // کاملا آفلاین یا فیلتر شدید
+            }
+        }
+
+        function renderProxies() {
+            const container = document.getElementById('proxies-container');
+            container.innerHTML = '';
+
+            const filtered = allProxies.filter(p => {
+                if (currentTab === 'all') return true;
+                if (currentTab === 'alive') return p.status === 'alive';
+                if (currentTab === 'dead') return p.status === 'dead';
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-500 text-sm">
+                        <i class="fa-regular fa-folder-open text-2xl mb-2 block"></i>
+                        پروکسی در این دسته بندی وجود ندارد.
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(proxy => {
+                const card = document.createElement('div');
+                card.className = `glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${proxy.status === 'dead' ? 'opacity-40' : ''}`;
+                
+                let badgeClass = 'bg-slate-800 text-slate-400';
+                let badgeContent = '<i class="fa-solid fa-spinner fa-spin text-[10px] mr-1"></i> در حال سنجش';
+                let iconClass = 'bg-slate-800 text-slate-400';
+
+                if (proxy.status === 'alive') {
+                    badgeClass = 'bg-green-500/10 text-green-400 border border-green-500/20 font-mono';
+                    badgeContent = `<i class="fa-solid fa-bolt text-[10px] mr-1"></i> ${proxy.ping}ms`;
+                    iconClass = 'bg-green-500/10 text-green-400';
+                } else if (proxy.status === 'dead') {
+                    badgeClass = 'bg-red-500/10 text-red-400 border border-red-500/20';
+                    badgeContent = '<i class="fa-solid fa-xmark text-[10px] mr-1"></i> قطع ارتباط';
+                    iconClass = 'bg-red-500/10 text-red-400';
+                }
+
+                card.innerHTML = `
+                    <div class="absolute top-0 left-0 bg-slate-900/80 border-b border-r border-slate-800 text-slate-500 text-[10px] px-2.5 py-1 rounded-br-xl font-mono">
+                        #${proxy.id + 1}
+                    </div>
+                    <div class="${badgeClass} absolute top-2.5 right-2.5 text-[11px] px-2.5 py-0.5 rounded-lg font-medium">
+                        ${badgeContent}
+                    </div>
+
+                    <div class="mb-5 mt-5">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm ${iconClass}">
+                                <i class="fa-solid fa-server"></i>
+                            </div>
+                            <div class="overflow-hidden flex-1">
+                                <h3 class="font-bold text-slate-200 text-xs font-mono truncate" title="${proxy.server}">${proxy.server}</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">پورت: <span class="font-mono text-slate-300">${proxy.port}</span></p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950/50 border border-slate-900 rounded-xl p-2.5 text-[11px] font-mono text-slate-400 flex justify-between items-center">
+                            <span class="truncate pr-2"><span class="text-blue-400/60">Sec:</span> ${proxy.secret}</span>
+                            <i class="fa-solid fa-lock text-[10px] text-slate-600"></i>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button onclick="copySingle('${proxy.original}')" class="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 py-2 px-3 rounded-xl text-xs font-medium border border-slate-800 transition-colors">
+                            <i class="fa-regular fa-copy text-[13px]"></i> کپی لینک
+                        </button>
+                        <a href="${proxy.original}" class="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-xl text-xs font-bold shadow-md shadow-blue-900/10 transition-all">
+                            <i class="fa-solid fa-paper-plane text-[11px]"></i> اتصال
+                        </a>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function startBulkPing() {
+            document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-blue-400"></i> در حال آنالیز پینگ‌ها روی اینترنت شما...`;
+            
+            // تست همزمان پینگ‌ها جهت افزایش چشمگیر سرعت لود
+            const pingPromises = allProxies.map(async (proxy) => {
+                const ping = await measurePing(proxy.server);
+                if (ping !== null) {
+                    proxy.status = 'alive';
+                    proxy.ping = ping;
+                } else {
+                    proxy.status = 'dead';
+                }
+                updateCounters();
+                // رندر مجدد تب فعلی برای اعمال تغییرات لایو
+                renderProxies();
+            });
+
+            await Promise.all(pingPromises);
+            
+            document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i> آنالیز شبکه به پایان رسید.`;
+            
+            // نمایش دکمه کپی تجمیعی در صورتی که پروکسی زنده وجود داشته باشد
+            const hasAlive = allProxies.some(p => p.status === 'alive');
+            if (hasAlive) {
+                document.getElementById('btn-bulk-copy').classList.remove('hidden');
+            }
+        }
+
+        function updateCounters() {
+            const alive = allProxies.filter(p => p.status === 'alive').length;
+            const dead = allProxies.filter(p => p.status === 'dead').length;
+            
+            document.getElementById('count-alive').innerText = alive;
+            document.getElementById('count-dead').innerText = dead;
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['all', 'alive', 'dead'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.remove('active-tab');
+                document.getElementById(`tab-${t}`).classList.add('text-slate-400');
+            });
+            document.getElementById(`tab-${tab}`).classList.add('active-tab');
+            document.getElementById(`tab-${tab}`).classList.remove('text-slate-400');
+            renderProxies();
+        }
+
+        function copySingle(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('پروکسی با موفقیت کپی شد!');
+            });
+        }
+
+        function copyAllAlive() {
+            const aliveLinks = allProxies.filter(p => p.status === 'alive').map(p => p.original);
+            if (aliveLinks.length === 0) return;
+            
+            const bulkText = aliveLinks.join('\n');
+            navigator.clipboard.writeText(bulkText).then(() => {
+                showToast(`تعداد ${aliveLinks.length} پروکسی زنده به صورت یکجا کپی شد!`);
+            });
+        }
+
+        function showToast(message) {
+            // ساخت یک اعلان موقت بسیار شیک زیر صفحه
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-24 right-6 bg-slate-900 border border-blue-500/30 text-blue-400 px-5 py-3 rounded-xl shadow-2xl text-xs font-bold z-50 transition-all duration-300 transform translate-y-4 opacity-0';
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 100);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        fetchProxies();
+    </script>
+</body>
+</html>
