@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <style>
         body {
@@ -34,21 +35,39 @@
 <body class="text-slate-200 min-h-screen flex flex-col justify-between pb-24 selection:bg-blue-500/30">
 
     <div>
-        <header class="container mx-auto px-4 pt-14 pb-8 text-center relative">
+        <header class="container mx-auto px-4 pt-14 pb-6 text-center relative">
             <p class="text-xs font-mono tracking-widest text-blue-500 uppercase font-semibold mb-2">
                 MTProto Check For Telegram
             </p>
-            <h1 class="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 mb-4 font-mono">
+            <h1 class="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 mb-3 font-mono">
                 ProxyPulse
             </h1>
-            <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                سنجش پینگ زنده، مرتب‌سازی هوشمند بر اساس سرعت و خروجی تجمیعی پایداری شبکه.
-            </p>
             
-            <div id="update-status" class="mt-6 text-[11px] bg-slate-900/90 border border-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-full text-slate-400 font-medium">
+            <div id="update-status" class="text-[11px] bg-slate-900/90 border border-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-full text-slate-400 font-medium mb-6">
                 <i class="fa-solid fa-satellite-dish animate-pulse text-blue-400"></i> در حال اتصال به مخازن شبکه...
             </div>
         </header>
+
+        <div class="container mx-auto px-4 max-w-xl mb-8">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800/50 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-right">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-sm shadow-inner">
+                        <i class="fa-solid fa-globe"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Your Public Network</p>
+                        <h4 id="user-ip" class="font-mono text-sm font-bold text-slate-300">Loading IP...</h4>
+                    </div>
+                </div>
+                <div class="sm:text-left">
+                    <p class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">ISP Provider</p>
+                    <h4 id="user-isp" class="text-xs font-bold text-indigo-400 truncate max-w-[180px]">Checking Provider...</h4>
+                </div>
+                <div class="flex items-center gap-1 bg-emerald-500/5 border border-emerald-500/10 px-2.5 py-1 rounded-lg text-green-400 text-[10px] font-bold">
+                    <i class="fa-solid fa-chart-line animate-pulse"></i> پایدار
+                </div>
+            </div>
+        </div>
 
         <div class="container mx-auto px-4 max-w-md mb-8">
             <div class="bg-slate-950/60 p-1.5 rounded-2xl border border-slate-900 flex gap-1 text-xs font-bold">
@@ -72,6 +91,21 @@
 
             <div id="proxies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 transition-all duration-300"></div>
         </main>
+    </div>
+
+    <div id="qr-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-xs w-full text-center relative shadow-2xl transform scale-95 transition-transform duration-300">
+            <button onclick="closeQRModal()" class="absolute top-3 left-3 text-slate-500 hover:text-slate-300 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-sm font-bold text-slate-300 mb-4 font-mono">Scan Proxy QR Code</h3>
+            <div class="bg-white p-4 rounded-xl inline-block shadow-inner mb-4">
+                <canvas id="qr-canvas"></canvas>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+                دوربین گوشی را مقابل بارکد بگیرید تا پروکسی فوراً روی تلگرام شما فعال شود.
+            </p>
+        </div>
     </div>
 
     <div class="fixed bottom-6 left-6 right-6 z-50 flex justify-between items-center pointer-events-none">
@@ -98,26 +132,35 @@
         let allProxies = [];
         let currentTab = 'all';
 
+        // واکشی اطلاعات اینترنت کاربر (IP و ISP)
+        async function fetchNetworkInfo() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                document.getElementById('user-ip').innerText = data.ip || 'Unknown';
+                document.getElementById('user-isp').innerText = data.org || 'Unknown Provider';
+            } catch (e) {
+                document.getElementById('user-ip').innerText = '127.0.0.1 (Error)';
+                document.getElementById('user-isp').innerText = 'Local Operator';
+            }
+        }
+
         async function fetchProxies() {
             let textData = '';
             
             try {
-                // تلاش اول: دریافت از CDN ضد فیلتر
                 document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-satellite-dish animate-pulse text-blue-400"></i> در حال تلاش برای اتصال به مخزن اول (CDN)...`;
                 const response = await fetch(primaryUrl);
                 if (!response.ok) throw new Error('CDN Failed');
                 textData = await response.text();
-                console.log('Data fetched from Primary CDN');
             } catch (error) {
-                // تلاش دوم: اگر اولی ارور داد، سوئیچ روی گیت‌هاب مستقیم
                 try {
                     document.getElementById('update-status').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> مخزن اول ناموفق بود. سوئیچ به مخزن پشتیبان (GitHub)...`;
                     const response = await fetch(fallbackUrl);
                     if (!response.ok) throw new Error('Fallback Failed');
                     textData = await response.text();
-                    console.log('Data fetched from Fallback GitHub');
                 } catch (fallbackError) {
-                    // اگر هر دو مخزن روی اینترنت کاربر بلاک بودند
                     document.getElementById('loading-state').innerHTML = `
                         <i class="fa-solid fa-circle-exclamation text-red-500 text-2xl mb-2"></i>
                         <p class="text-xs text-red-400 font-mono">هر دو مخزن اصلی و پشتیبان روی شبکه شما مسدود هستند.</p>
@@ -130,7 +173,6 @@
                 .map(line => line.trim())
                 .filter(line => line.startsWith('tg://proxy') || line.startsWith('https://t.me/proxy'));
             
-            // جلوگیری از ورود دیتای تکراری با استفاده از Set
             const uniqueLines = [...new Set(lines)];
             
             allProxies = uniqueLines.map((link, idx) => {
@@ -184,6 +226,7 @@
 
             let displayList = [...allProxies];
 
+            // مرتب‌سازی خودکار: زنده و سریع‌ترین‌ها بالاتر می‌آیند
             displayList.sort((a, b) => {
                 if (a.status === 'alive' && b.status === 'alive') return a.ping - b.ping;
                 if (a.status === 'alive') return -1;
@@ -256,13 +299,18 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="copySingle('${proxy.original}')" class="flex items-center justify-center gap-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-400 hover:text-slate-200 py-2 px-3 rounded-xl text-xs font-medium border border-slate-900 transition-colors">
-                            <i class="fa-regular fa-copy"></i> کپی لینک
+                    <div class="flex flex-col gap-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="copySingle('${proxy.original}')" class="flex items-center justify-center gap-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-400 hover:text-slate-200 py-2 px-3 rounded-xl text-xs font-medium border border-slate-900 transition-colors">
+                                <i class="fa-regular fa-copy"></i> کپی لینک
+                            </button>
+                            <a href="${proxy.original}" class="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all ${proxy.status === 'dead' ? 'pointer-events-none bg-slate-900 text-slate-600 border border-slate-900 shadow-none' : ''}">
+                                <i class="fa-solid fa-bolt text-[10px]"></i> اتصال
+                            </a>
+                        </div>
+                        <button onclick="openQRModal('${proxy.original}')" class="flex items-center justify-center gap-1.5 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 text-[11px] text-slate-400 py-2 rounded-xl transition-colors ${proxy.status === 'dead' ? 'hidden' : ''}">
+                            <i class="fa-solid fa-qrcode"></i> نمایش بارکد (QR Code)
                         </button>
-                        <a href="${proxy.original}" class="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all ${proxy.status === 'dead' ? 'pointer-events-none bg-slate-900 text-slate-600 border border-slate-900 shadow-none' : ''}">
-                            <i class="fa-solid fa-bolt text-[10px]"></i> اتصال
-                        </a>
                     </div>
                 `;
                 container.appendChild(card);
@@ -344,6 +392,34 @@
             }, 3000);
         }
 
+        // توابع مدیریت مودال بارکد (QR Code)
+        function openQRModal(link) {
+            const modal = document.getElementById('qr-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+
+            // رندر بارکد در بوم (Canvas)
+            new QRious({
+                element: document.getElementById('qr-canvas'),
+                value: link,
+                size: 180,
+                background: '#ffffff',
+                foreground: '#0f172a'
+            });
+        }
+
+        function closeQRModal() {
+            const modal = document.getElementById('qr-modal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // شروع واکشی سرویس‌ها به محض لود صفحه
+        fetchNetworkInfo();
         fetchProxies();
     </script>
 </body>
