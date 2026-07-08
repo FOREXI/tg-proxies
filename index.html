@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProxyPulse - Proxy Access Checker</title>
+    <title>ProxyPulse - Proxy List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
@@ -26,11 +26,6 @@
             box-shadow: 0 12px 40px rgba(59, 130, 246, 0.08);
             transform: translateY(-2px);
         }
-        .active-tab {
-            background: rgba(59, 130, 246, 0.15);
-            color: #60a5fa;
-            border-color: rgba(59, 130, 246, 0.4);
-        }
     </style>
 </head>
 <body class="text-slate-200 min-h-screen flex flex-col justify-between pb-24 selection:bg-blue-500/30">
@@ -38,16 +33,11 @@
     <div>
         <header class="container mx-auto px-4 pt-14 pb-6 text-center relative">
             <p class="text-xs font-mono tracking-widest text-blue-500 uppercase font-semibold mb-2">
-                MTProto Proxy Access Checker
+                MTProto Proxy Directory
             </p>
             <h1 class="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 mb-3 font-mono">
                 ProxyPulse
             </h1>
-
-            <div id="update-status" class="text-[11px] bg-slate-900/90 border border-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-full text-slate-400 font-medium mb-6">
-                <i class="fa-solid fa-satellite-dish animate-pulse text-blue-400"></i>
-                در حال اتصال به مخزن پروکسی...
-            </div>
         </header>
 
         <div class="container mx-auto px-4 max-w-xl mb-8">
@@ -67,29 +57,23 @@
                 </div>
                 <button id="btn-check-net" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-2 rounded-xl transition-all active:scale-95">
                     <i class="fa-solid fa-circle-question"></i>
-                    بررسی وضعیت شبکه من
+                    بررسی شبکه من
                 </button>
             </div>
         </div>
 
         <div class="container mx-auto px-4 max-w-md mb-8">
-            <div class="bg-slate-950/60 p-1.5 rounded-2xl border border-slate-900 flex gap-1 text-xs font-bold">
-                <button data-tab="all" id="tab-all" class="flex-1 py-3 rounded-xl text-center transition-all duration-200 active-tab">
-                    همه (<span id="count-all">0</span>)
-                </button>
-                <button data-tab="alive" id="tab-alive" class="flex-1 py-3 rounded-xl text-center text-slate-400 hover:text-slate-200 transition-all duration-200 border border-transparent">
-                    قابل دسترسی (<span id="count-alive" class="text-green-400">0</span>)
-                </button>
-                <button data-tab="dead" id="tab-dead" class="flex-1 py-3 rounded-xl text-center text-slate-400 hover:text-slate-200 transition-all duration-200 border border-transparent">
-                    ناموفق (<span id="count-dead" class="text-red-400">0</span>)
-                </button>
+            <div class="bg-slate-950/60 p-3 rounded-2xl border border-slate-900 flex justify-center items-center gap-2 text-sm font-bold text-slate-300">
+                <i class="fa-solid fa-list text-blue-500"></i>
+                تعداد کل پروکسی‌های لیست شده: 
+                <span id="count-all" class="text-blue-400 font-mono bg-blue-500/10 px-3 py-1 rounded-lg">0</span>
             </div>
         </div>
 
         <main class="container mx-auto px-4 max-w-6xl">
             <div id="loading-state" class="text-center py-20">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-800 border-t-blue-500 mb-4"></div>
-                <p class="text-xs text-slate-500 font-mono">Fetching proxy list from source...</p>
+                <p class="text-xs text-slate-500 font-mono" id="loading-text">در حال دریافت لیست پروکسی‌ها...</p>
             </div>
 
             <div id="proxies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 transition-all duration-300"></div>
@@ -112,13 +96,13 @@
     </div>
 
     <div class="fixed bottom-6 left-6 right-6 z-50 flex justify-between items-center pointer-events-none">
-        <button id="btn-refresh" class="pointer-events-auto flex items-center justify-center bg-slate-900 border border-slate-800 text-slate-300 hover:text-white p-3.5 rounded-2xl shadow-xl transition-all active:scale-95 group" title="سنجش مجدد دسترسی">
+        <button id="btn-refresh" class="pointer-events-auto flex items-center justify-center bg-slate-900 border border-slate-800 text-slate-300 hover:text-white p-3.5 rounded-2xl shadow-xl transition-all active:scale-95 group" title="دریافت مجدد لیست">
             <i class="fa-solid fa-arrows-rotate text-base group-hover:rotate-180 transition-transform duration-500"></i>
         </button>
 
         <button id="btn-bulk-copy" class="hidden pointer-events-auto flex items-center gap-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold text-xs py-3.5 px-5 rounded-2xl shadow-xl shadow-blue-950/40 transition-all transform active:scale-95">
             <i class="fa-solid fa-layer-group text-sm"></i>
-            <span>کپی تجمیعی قابل دسترسی‌ها</span>
+            <span>کپی کل پروکسی‌ها</span>
         </button>
     </div>
 
@@ -133,8 +117,6 @@
         const fallbackUrl = 'https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt';
 
         let allProxies = [];
-        let currentTab = 'all';
-
         const el = (id) => document.getElementById(id);
 
         function escapeHTML(str = '') {
@@ -187,20 +169,20 @@
 
         async function fetchProxies() {
             try {
-                el('update-status').innerHTML = '<i class="fa-solid fa-satellite-dish animate-pulse text-blue-400"></i> در حال تلاش برای اتصال به مخزن اول (CDN)...';
+                el('loading-text').innerHTML = 'اتصال به مخزن اول...';
                 let response = await fetch(primaryUrl);
                 if (!response.ok) throw new Error('cdn fail');
                 return await response.text();
             } catch {
                 try {
-                    el('update-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> مخزن اول ناموفق بود. سوئیچ به مخزن پشتیبان (GitHub)...';
+                    el('loading-text').innerHTML = 'مخزن اول ناموفق بود. اتصال به مخزن پشتیبان...';
                     const response = await fetch(fallbackUrl);
                     if (!response.ok) throw new Error('fallback fail');
                     return await response.text();
                 } catch {
                     el('loading-state').innerHTML = `
                         <i class="fa-solid fa-circle-exclamation text-red-500 text-2xl mb-2"></i>
-                        <p class="text-xs text-red-400 font-mono">هر دو منبع اصلی و پشتیبان در دسترس نیستند.</p>
+                        <p class="text-xs text-red-400 font-mono">هر دو منبع دریافت اطلاعات در دسترس نیستند.</p>
                     `;
                     return '';
                 }
@@ -216,82 +198,26 @@
 
         function buildProxyList(textData) {
             const uniqueLines = [...new Set(normalizeLines(textData))];
+            // معکوس کردن لیست برای نمایش پروکسی‌های جدیدتر در ابتدا
             return uniqueLines
+                .reverse()
                 .map((link, idx) => {
                     const parsed = parseProxyLink(link);
-                    return parsed ? { ...parsed, id: idx, status: 'testing', ping: null } : null;
+                    return parsed ? { ...parsed, id: idx } : null;
                 })
                 .filter(Boolean);
         }
 
-        function updateCounters() {
-            setText('count-all', allProxies.length);
-            setText('count-alive', allProxies.filter(p => p.status === 'alive').length);
-            setText('count-dead', allProxies.filter(p => p.status === 'dead').length);
-        }
-
-        function getFilteredList() {
-            const displayList = [...allProxies].sort((a, b) => {
-                if (a.status === 'alive' && b.status === 'alive') return a.ping - b.ping;
-                if (a.status === 'alive') return -1;
-                if (b.status === 'alive') return 1;
-                if (a.status === 'dead' && b.status !== 'dead') return 1;
-                if (b.status === 'dead' && a.status !== 'dead') return -1;
-                return 0;
-            });
-
-            return displayList.filter(p => {
-                if (currentTab === 'all') return true;
-                if (currentTab === 'alive') return p.status === 'alive';
-                if (currentTab === 'dead') return p.status === 'dead';
-                return true;
-            });
-        }
-
-        function statusMeta(proxy) {
-            if (proxy.status === 'alive') {
-                let speedTag = '';
-                if (proxy.ping < 120) speedTag = '<span class="bg-cyan-500/10 text-cyan-400 text-[9px] px-2 py-0.5 rounded-md font-bold">عالی ⚡</span>';
-                else if (proxy.ping < 250) speedTag = '<span class="bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-0.5 rounded-md font-bold">خوب 🟢</span>';
-                else speedTag = '<span class="bg-amber-500/10 text-amber-400 text-[9px] px-2 py-0.5 rounded-md font-bold">معمولی 🟡</span>';
-
-                return {
-                    badgeClass: 'bg-green-500/10 text-green-400 border border-green-500/20 font-mono',
-                    badgeContent: `${proxy.ping} ms`,
-                    speedTag
-                };
-            }
-
-            if (proxy.status === 'dead') {
-                return {
-                    badgeClass: 'bg-red-500/10 text-red-400 border border-red-500/20',
-                    badgeContent: 'ناموفق',
-                    speedTag: ''
-                };
-            }
-
-            return {
-                badgeClass: 'bg-slate-900 text-slate-500 border border-slate-800',
-                badgeContent: 'در حال بررسی',
-                speedTag: ''
-            };
-        }
-
         function proxyCard(proxy) {
-            const meta = statusMeta(proxy);
             const card = document.createElement('div');
-            card.className = `glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${proxy.status === 'dead' ? 'opacity-30 scale-[0.98]' : ''}`;
+            card.className = `glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-all duration-300`;
 
             card.innerHTML = `
                 <div class="absolute top-0 left-0 bg-slate-950/80 border-b border-r border-slate-900 text-slate-600 text-[9px] px-2 py-0.5 rounded-br-xl font-mono">#${proxy.id + 1}</div>
-                <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-                    ${meta.speedTag}
-                    <div class="${meta.badgeClass} text-[10px] px-2 py-0.5 rounded-md font-medium">${meta.badgeContent}</div>
-                </div>
-
-                <div class="mb-5 mt-6">
+                
+                <div class="mb-5 mt-4">
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-xs text-slate-400 border border-slate-900">
+                        <div class="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-xs text-slate-400 border border-slate-900 shadow-inner">
                             <i class="fa-solid fa-network-wired"></i>
                         </div>
                         <div class="overflow-hidden flex-1">
@@ -299,7 +225,7 @@
                             <p class="text-[10px] text-slate-500 mt-0.5">Port: <span class="font-mono text-slate-400">${escapeHTML(proxy.port)}</span></p>
                         </div>
                     </div>
-                    <div class="bg-slate-950/40 border border-slate-900 rounded-xl p-2.5 text-[10px] font-mono text-slate-500 flex justify-between items-center select-all">
+                    <div class="bg-slate-950/40 border border-slate-900 rounded-xl p-2.5 text-[10px] font-mono text-slate-500 flex justify-between items-center select-all cursor-text hover:bg-slate-900/60 transition-colors">
                         <span class="truncate pr-4"><span class="text-indigo-400/50">Secret:</span> ${escapeHTML(proxy.secret)}</span>
                         <i class="fa-solid fa-key text-[9px] text-slate-700"></i>
                     </div>
@@ -307,14 +233,14 @@
 
                 <div class="flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2">
-                        <button class="btn-copy flex items-center justify-center gap-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-400 hover:text-slate-200 py-2 px-3 rounded-xl text-xs font-medium border border-slate-900 transition-colors">
+                        <button class="btn-copy flex items-center justify-center gap-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-400 hover:text-slate-200 py-2 px-3 rounded-xl text-xs font-medium border border-slate-900 transition-colors active:scale-95">
                             <i class="fa-regular fa-copy"></i> کپی لینک
                         </button>
-                        <a href="${proxy.original}" class="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all ${proxy.status === 'dead' ? 'pointer-events-none bg-slate-900 text-slate-600 border border-slate-900 shadow-none' : ''}" ${proxy.status !== 'dead' ? 'rel="noreferrer noopener"' : ''}>
+                        <a href="${proxy.original}" class="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all active:scale-95" rel="noreferrer noopener">
                             <i class="fa-solid fa-bolt text-[10px]"></i> اتصال
                         </a>
                     </div>
-                    <button class="btn-qr flex items-center justify-center gap-1.5 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 text-[11px] text-slate-400 py-2 rounded-xl transition-colors ${proxy.status === 'dead' ? 'hidden' : ''}">
+                    <button class="btn-qr flex items-center justify-center gap-1.5 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 text-[11px] text-slate-400 py-2 rounded-xl transition-colors active:scale-95">
                         <i class="fa-solid fa-qrcode"></i> نمایش QR Code
                     </button>
                 </div>
@@ -329,76 +255,17 @@
             const container = el('proxies-container');
             container.innerHTML = '';
 
-            const filtered = getFilteredList();
-            if (!filtered.length) {
+            if (!allProxies.length) {
                 container.innerHTML = `
                     <div class="col-span-full text-center py-16 text-slate-600 text-xs font-medium">
                         <i class="fa-solid fa-cubes-stacked text-xl mb-2 block"></i>
-                        هیچ پروکسی در این بخش یافت نشد.
+                        هیچ پروکسی یافت نشد.
                     </div>
                 `;
                 return;
             }
 
-            filtered.forEach(proxy => container.appendChild(proxyCard(proxy)));
-        }
-
-        async function measurePing(server) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
-            const startTime = performance.now();
-
-            try {
-                await fetch(`https://${server}/favicon.ico?p=${Math.random()}`, {
-                    mode: 'no-cors',
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                return Math.round(performance.now() - startTime);
-            } catch (err) {
-                clearTimeout(timeoutId);
-                if (err.name !== 'AbortError') return Math.round(performance.now() - startTime);
-                return null;
-            }
-        }
-
-        async function startBulkPing() {
-            const statusEl = el('update-status');
-            if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-400"></i> در حال بروزرسانی و سنجش دسترسی...';
-
-            allProxies.forEach(p => { if (p.status !== 'alive') p.status = 'testing'; });
-            renderProxies();
-
-            const results = await Promise.all(allProxies.map(async (proxy) => {
-                const ping = await measurePing(proxy.server);
-                if (ping !== null) return { proxy, status: 'alive', ping };
-                return { proxy, status: 'dead', ping: null };
-            }));
-
-            results.forEach(({ proxy, status, ping }) => {
-                proxy.status = status;
-                proxy.ping = ping;
-            });
-
-            updateCounters();
-            renderProxies();
-
-            if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check text-green-400"></i> سنجش دسترسی با موفقیت انجام شد.';
-            el('btn-bulk-copy').classList.toggle('hidden', !allProxies.some(p => p.status === 'alive'));
-        }
-
-        function switchTab(tab) {
-            currentTab = tab;
-            ['all', 'alive', 'dead'].forEach(t => {
-                const btn = el(`tab-${t}`);
-                btn.classList.remove('active-tab');
-                btn.classList.add('text-slate-400');
-            });
-
-            const active = el(`tab-${tab}`);
-            active.classList.add('active-tab');
-            active.classList.remove('text-slate-400');
-            renderProxies();
+            allProxies.forEach(proxy => container.appendChild(proxyCard(proxy)));
         }
 
         function copySingle(text) {
@@ -407,12 +274,10 @@
             });
         }
 
-        function copyAllAlive() {
-            const aliveProxies = allProxies.filter(p => p.status === 'alive').sort((a, b) => a.ping - b.ping);
-            if (!aliveProxies.length) return;
-
-            navigator.clipboard.writeText(aliveProxies.map(p => p.original).join('\n')).then(() => {
-                showToast(`تعداد ${aliveProxies.length} پروکسی قابل دسترسی یکجا کپی شد 🚀`);
+        function copyAll() {
+            if (!allProxies.length) return;
+            navigator.clipboard.writeText(allProxies.map(p => p.original).join('\n')).then(() => {
+                showToast(`تعداد ${allProxies.length} پروکسی به صورت یکجا کپی شد 🚀`);
             });
         }
 
@@ -453,27 +318,35 @@
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        async function init() {
+        async function loadAndRender() {
+            el('proxies-container').innerHTML = '';
+            el('loading-state').style.display = 'block';
+            el('btn-bulk-copy').classList.add('hidden');
+            
+            const textData = await fetchProxies();
+            if (!textData) return;
+
+            allProxies = buildProxyList(textData);
+            setText('count-all', allProxies.length);
+            
+            el('loading-state').style.display = 'none';
+            renderProxies();
+
+            if(allProxies.length > 0) {
+                el('btn-bulk-copy').classList.remove('hidden');
+            }
+        }
+
+        function init() {
             el('btn-check-net').addEventListener('click', fetchNetworkInfo);
-            el('btn-bulk-copy').addEventListener('click', copyAllAlive);
-            el('btn-refresh').addEventListener('click', startBulkPing);
+            el('btn-bulk-copy').addEventListener('click', copyAll);
+            el('btn-refresh').addEventListener('click', loadAndRender);
             el('btn-close-qr').addEventListener('click', closeQRModal);
             el('qr-modal').addEventListener('click', (e) => {
                 if (e.target.id === 'qr-modal') closeQRModal();
             });
 
-            ['tab-all', 'tab-alive', 'tab-dead'].forEach(id => {
-                el(id).addEventListener('click', () => switchTab(el(id).dataset.tab));
-            });
-
-            const textData = await fetchProxies();
-            if (!textData) return;
-
-            allProxies = buildProxyList(textData);
-            updateCounters();
-            el('loading-state').style.display = 'none';
-            renderProxies();
-            startBulkPing();
+            loadAndRender();
         }
 
         init();
